@@ -38,6 +38,24 @@ data class GroceryTotals(
     val currency: CurrencyConfig = CurrencyConfig.PHP
 )
 
+data class StorePriceComparison(
+    val storeName: String,
+    val storeAddress: String,
+    val price: Double,
+    val unit: String,
+    val distanceMeters: Float?,
+    val isBestPrice: Boolean,
+    val isCurrentStore: Boolean
+)
+
+data class PriceEstimation(
+    val productName: String,
+    val lowestPrice: Double,
+    val averagePrice: Double,
+    val highestPrice: Double,
+    val comparisons: List<StorePriceComparison>
+)
+
 data class ProductPriceSummary(
     val productName: String,
     val lowestPrice: Double,
@@ -573,6 +591,74 @@ class GroceryViewModel(application: Application) : AndroidViewModel(application)
     fun deleteStore(store: Store) {
         viewModelScope.launch {
             repository.deleteStore(store)
+        }
+    }
+
+    // Price comparison across stores for a specific item
+    fun getNearbyStoreComparisons(itemName: String, currentStoreName: String): List<StorePriceComparison> {
+        val records = allPriceRecords.value
+        val stores = allStores.value
+        val userLoc = _currentLocation.value
+
+        val cleanItem = itemName.trim().lowercase()
+        // Match items with overlapping name or keywords
+        val matchedRecords = records.filter { rec ->
+            val cleanRec = rec.productName.trim().lowercase()
+            cleanRec.contains(cleanItem) || cleanItem.contains(cleanRec) ||
+                    cleanItem.split(" ").any { word -> word.length > 3 && cleanRec.contains(word) }
+        }
+
+        if (matchedRecords.isEmpty()) return emptyList()
+
+        // Group by store name and get lowest/latest price per store
+        val byStore = matchedRecords.groupBy { it.storeName.lowercase() }
+        val lowestOverall = matchedRecords.minOfOrNull { it.price } ?: 0.0
+
+        return byStore.map { (_, storeRecs) ->
+            val latest = storeRecs.maxByOrNull { it.recordedAt }!!
+            val storeObj = stores.firstOrNull { it.name.equals(latest.storeName, ignoreCase = true) }
+
+            val distance = if (userLoc != null && storeObj != null && storeObj.latitude != 0.0) {
+                LocationHelper.distanceBetweenMeters(
+                    userLoc.latitude, userLoc.longitude,
+                    storeObj.latitude, storeObj.longitude
+                )
+            } else null
+
+            StorePriceComparison(
+                storeName = latest.storeName,
+                storeAddress = latest.storeAddress.ifBlank { storeObj?.address ?: "" },
+                price = latest.price,
+                unit = latest.unit,
+                distanceMeters = distance,
+                isBestPrice = latest.price == lowestOverall,
+                isCurrentStore = latest.storeName.equals(currentStoreName, ignoreCase = true)
+            )
+        }.sortedBy { it.price }
+    }
+
+    // Price search and estimation
+    fun getEstimatedPricing(query: String): PriceEstimation? {
+        if (query.isBlank()) return null
+        val comparisons = getNearbyStoreComparisons(query, "")
+        if (comparisons.isEmpty()) return null
+
+        val prices = comparisons.map { it.price }
+        return PriceEstimation(
+            productName = query.trim(),
+            lowestPrice = prices.minOrNull() ?: 0.0,
+            averagePrice = prices.average(),
+            highestPrice = prices.maxOrNull() ?: 0.0,
+            comparisons = comparisons
+        )
+    }
+
+    // Auto-Add Recipe Ingredients directly from dish name
+    fun autoAddRecipe(recipeName: String) {
+        viewModelScope.launch {
+            val symbol = _currentCurrency.value.symbol
+            val recipe = GeminiRecipeService.searchRecipeIngredients(recipeName, symbol)
+            addRecipeIngredientsToList(recipe.ingredients, _selectedStoreFilter.value ?: "")
         }
     }
 

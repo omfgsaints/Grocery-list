@@ -21,18 +21,23 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PriceCheck
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -65,8 +70,11 @@ import com.example.ui.components.TotalsBanner
 fun GroceryListScreen(
     viewModel: GroceryViewModel,
     onAddItemClick: () -> Unit,
+    onItemClick: (GroceryItem) -> Unit,
     onEditItemClick: (GroceryItem) -> Unit,
     onUpdatePriceClick: (GroceryItem) -> Unit,
+    onOpenAutoAddRecipe: () -> Unit,
+    onOpenPriceSearch: () -> Unit,
     onOpenBudgetDialog: () -> Unit,
     onOpenCurrencyDialog: () -> Unit,
     onOpenFamilySyncDialog: () -> Unit,
@@ -110,9 +118,9 @@ fun GroceryListScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Totals Banner
+            // Totals & Budget Banner
             item(key = "totals_banner") {
                 TotalsBanner(
                     totals = totals,
@@ -124,6 +132,36 @@ fun GroceryListScreen(
                     onUncheckAll = { viewModel.uncheckAllItems() },
                     onClearAll = { viewModel.clearAllItems() }
                 )
+            }
+
+            // Quick Feature Buttons: Auto-Add Recipe & Estimate Prices
+            item(key = "quick_recipe_price_buttons") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = onOpenAutoAddRecipe,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_auto_add_recipe")
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Auto-Add Recipe", fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = onOpenPriceSearch,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_check_prices")
+                    ) {
+                        Icon(Icons.Default.PriceCheck, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Estimate Prices")
+                    }
+                }
             }
 
             // Search Bar
@@ -220,6 +258,51 @@ fun GroceryListScreen(
                 }
             }
 
+            // Simple Column Table Header (Item, Price, # of pieces)
+            if (items.isNotEmpty()) {
+                item(key = "table_column_header") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "CART",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.width(40.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "ITEM (TAP FOR DETAILS)",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.weight(1.4f)
+                        )
+                        Text(
+                            text = "PRICE",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.outline,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.weight(0.9f)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "# PIECES",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.outline,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.width(20.dp))
+                    }
+                }
+            }
+
             // Items List or Empty State
             if (items.isEmpty()) {
                 item(key = "empty_state") {
@@ -262,7 +345,7 @@ fun GroceryListScreen(
                                 text = if (searchQuery.isNotBlank() || selectedStoreFilter != null) {
                                     "Try clearing your search or filters to see all items."
                                 } else {
-                                    "Tap '+ Add Item' to start adding products and tracking prices with store location tags."
+                                    "Tap '+ Add Item' or use '⚡ Auto-Add Recipe' to add groceries and track prices with store location tags."
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
@@ -294,12 +377,10 @@ fun GroceryListScreen(
                         onToggleCheck = { viewModel.toggleItemChecked(item) },
                         onIncrementQty = { viewModel.updateQuantity(item.id, item.quantity + 1.0) },
                         onDecrementQty = { viewModel.updateQuantity(item.id, (item.quantity - 1.0).coerceAtLeast(0.0)) },
+                        onItemClick = { onItemClick(item) },
                         onUpdatePrice = { onUpdatePriceClick(item) },
                         onEditItem = { onEditItemClick(item) },
-                        onDeleteItem = { viewModel.deleteItem(item) },
-                        onStoreClick = { store ->
-                            viewModel.setStoreFilter(store)
-                        }
+                        onDeleteItem = { viewModel.deleteItem(item) }
                     )
                 }
             }

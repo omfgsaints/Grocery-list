@@ -71,44 +71,147 @@ abstract class AppDatabase : RoomDatabase() {
             val initialStores = listOf(
                 Store(
                     id = 1,
+                    name = "Puregold Price Club",
+                    address = "E. Rodriguez Sr. Ave, Quezon City, Metro Manila",
+                    latitude = 14.6225,
+                    longitude = 121.0255,
+                    iconEmoji = "🛒",
+                    lastVisitedAt = now - dayMs
+                ),
+                Store(
+                    id = 2,
+                    name = "SM Supermarket",
+                    address = "EDSA Cor. Doña Julia Vargas Ave, Mandaluyong, Metro Manila",
+                    latitude = 14.5842,
+                    longitude = 121.0567,
+                    iconEmoji = "🏪",
+                    lastVisitedAt = now - 2 * dayMs
+                ),
+                Store(
+                    id = 3,
+                    name = "Robinsons Supermarket",
+                    address = "Robinsons Galleria, Ortigas Ave, Quezon City",
+                    latitude = 14.5901,
+                    longitude = 121.0602,
+                    iconEmoji = "🍎",
+                    lastVisitedAt = now - 3 * dayMs
+                ),
+                Store(
+                    id = 4,
                     name = "Trader Joe's",
                     address = "855 El Camino Real, Palo Alto, CA",
                     latitude = 37.4429,
                     longitude = -122.1614,
                     iconEmoji = "🌿",
-                    lastVisitedAt = now - dayMs
+                    lastVisitedAt = now - 4 * dayMs
                 ),
                 Store(
-                    id = 2,
-                    name = "Safeway Supermarket",
-                    address = "2811 Middlefield Rd, Palo Alto, CA",
-                    latitude = 37.4385,
-                    longitude = -122.1245,
-                    iconEmoji = "🛒",
-                    lastVisitedAt = now - 2 * dayMs
-                ),
-                Store(
-                    id = 3,
+                    id = 5,
                     name = "Costco Wholesale",
                     address = "1000 Charleston Rd, Mountain View, CA",
                     latitude = 37.4180,
                     longitude = -122.0950,
                     iconEmoji = "📦",
-                    lastVisitedAt = now - 4 * dayMs
-                ),
-                Store(
-                    id = 4,
-                    name = "Whole Foods Market",
-                    address = "774 Emerson St, Palo Alto, CA",
-                    latitude = 37.4445,
-                    longitude = -122.1601,
-                    iconEmoji = "🍎",
                     lastVisitedAt = now - 6 * dayMs
                 )
             )
             storeDao.insertAll(initialStores)
 
             val initialPriceRecords = listOf(
+                // Chicken (Adobo Cut)
+                PriceRecord(
+                    productName = "Fresh Chicken (Adobo Cut)",
+                    storeName = "Puregold Price Club",
+                    price = 210.0,
+                    unit = "kg",
+                    storeAddress = "E. Rodriguez Sr. Ave, Quezon City",
+                    latitude = 14.6225,
+                    longitude = 121.0255,
+                    recordedAt = now - dayMs
+                ),
+                PriceRecord(
+                    productName = "Fresh Chicken (Adobo Cut)",
+                    storeName = "SM Supermarket",
+                    price = 235.0,
+                    unit = "kg",
+                    storeAddress = "EDSA, Mandaluyong",
+                    latitude = 14.5842,
+                    longitude = 121.0567,
+                    recordedAt = now - 2 * dayMs
+                ),
+                PriceRecord(
+                    productName = "Fresh Chicken (Adobo Cut)",
+                    storeName = "Robinsons Supermarket",
+                    price = 225.0,
+                    unit = "kg",
+                    storeAddress = "Ortigas Ave, Quezon City",
+                    latitude = 14.5901,
+                    longitude = 121.0602,
+                    recordedAt = now - 4 * dayMs
+                ),
+                // Pork Belly Liempo
+                PriceRecord(
+                    productName = "Pork Belly (Liempo)",
+                    storeName = "Puregold Price Club",
+                    price = 320.0,
+                    unit = "kg",
+                    storeAddress = "E. Rodriguez Sr. Ave, Quezon City",
+                    latitude = 14.6225,
+                    longitude = 121.0255,
+                    recordedAt = now - dayMs
+                ),
+                PriceRecord(
+                    productName = "Pork Belly (Liempo)",
+                    storeName = "SM Supermarket",
+                    price = 350.0,
+                    unit = "kg",
+                    storeAddress = "EDSA, Mandaluyong",
+                    latitude = 14.5842,
+                    longitude = 121.0567,
+                    recordedAt = now - 3 * dayMs
+                ),
+                // Fresh Eggs
+                PriceRecord(
+                    productName = "Farm Fresh Eggs (Dozen)",
+                    storeName = "Puregold Price Club",
+                    price = 114.0,
+                    unit = "dozen",
+                    storeAddress = "E. Rodriguez Sr. Ave, Quezon City",
+                    latitude = 14.6225,
+                    longitude = 121.0255,
+                    recordedAt = now - dayMs
+                ),
+                PriceRecord(
+                    productName = "Farm Fresh Eggs (Dozen)",
+                    storeName = "SM Supermarket",
+                    price = 126.0,
+                    unit = "dozen",
+                    storeAddress = "EDSA, Mandaluyong",
+                    latitude = 14.5842,
+                    longitude = 121.0567,
+                    recordedAt = now - 2 * dayMs
+                ),
+                // Bananas
+                PriceRecord(
+                    productName = "Lakatan Bananas",
+                    storeName = "Puregold Price Club",
+                    price = 85.0,
+                    unit = "kg",
+                    storeAddress = "E. Rodriguez Sr. Ave, Quezon City",
+                    latitude = 14.6225,
+                    longitude = 121.0255,
+                    recordedAt = now - 2 * dayMs
+                ),
+                PriceRecord(
+                    productName = "Lakatan Bananas",
+                    storeName = "Robinsons Supermarket",
+                    price = 90.0,
+                    unit = "kg",
+                    storeAddress = "Ortigas Ave, Quezon City",
+                    latitude = 14.5901,
+                    longitude = 121.0602,
+                    recordedAt = now - 5 * dayMs
+                ),
                 // Whole Milk
                 PriceRecord(
                     productName = "Whole Organic Milk",

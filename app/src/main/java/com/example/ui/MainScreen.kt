@@ -29,11 +29,15 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.entity.GroceryItem
+import com.example.model.RecipeIngredient
 import com.example.ui.components.AddEditItemDialog
 import com.example.ui.components.AddStoreDialog
+import com.example.ui.components.AutoAddRecipeDialog
 import com.example.ui.components.BudgetDialog
 import com.example.ui.components.CurrencyDialog
 import com.example.ui.components.FamilySyncDialog
+import com.example.ui.components.ItemDetailsBottomSheet
+import com.example.ui.components.PriceSearchDialog
 import com.example.ui.components.QuickPriceUpdateDialog
 import com.example.ui.screens.GroceryListScreen
 import com.example.ui.screens.PriceCatalogScreen
@@ -54,14 +58,17 @@ fun MainScreen(
 ) {
     var selectedTab by remember { mutableStateOf(MainTab.GROCERY_LIST) }
 
-    // Dialog state
+    // Dialog & Sheet states
     var showAddItemDialog by remember { mutableStateOf(false) }
     var itemToEdit by remember { mutableStateOf<GroceryItem?>(null) }
     var itemToUpdatePrice by remember { mutableStateOf<GroceryItem?>(null) }
+    var selectedDetailItem by remember { mutableStateOf<GroceryItem?>(null) }
     var showAddStoreDialog by remember { mutableStateOf(false) }
     var showBudgetDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showFamilySyncDialog by remember { mutableStateOf(false) }
+    var showAutoAddRecipeDialog by remember { mutableStateOf(false) }
+    var showPriceSearchDialog by remember { mutableStateOf(false) }
 
     val totals by viewModel.totals.collectAsStateWithLifecycle()
     val stores by viewModel.allStores.collectAsStateWithLifecycle()
@@ -165,12 +172,21 @@ fun MainScreen(
                             itemToEdit = null
                             showAddItemDialog = true
                         },
+                        onItemClick = { item ->
+                            selectedDetailItem = item
+                        },
                         onEditItemClick = { item ->
                             itemToEdit = item
                             showAddItemDialog = true
                         },
                         onUpdatePriceClick = { item ->
                             itemToUpdatePrice = item
+                        },
+                        onOpenAutoAddRecipe = {
+                            showAutoAddRecipeDialog = true
+                        },
+                        onOpenPriceSearch = {
+                            showPriceSearchDialog = true
                         },
                         onOpenBudgetDialog = { showBudgetDialog = true },
                         onOpenCurrencyDialog = { showCurrencyDialog = true },
@@ -273,6 +289,81 @@ fun MainScreen(
                         storeAddress = storeAddress.ifBlank { null }
                     )
                     itemToUpdatePrice = null
+                }
+            )
+        }
+
+        // Item Details Bottom Sheet (Nearby Store Price Comparison + Recipes for item)
+        selectedDetailItem?.let { item ->
+            ItemDetailsBottomSheet(
+                item = item,
+                currencySymbol = totals.currency.symbol,
+                viewModel = viewModel,
+                onDismiss = { selectedDetailItem = null },
+                onEditItem = {
+                    itemToEdit = item
+                    selectedDetailItem = null
+                    showAddItemDialog = true
+                },
+                onUpdatePrice = {
+                    itemToUpdatePrice = item
+                    selectedDetailItem = null
+                },
+                onDeleteItem = {
+                    viewModel.deleteItem(item)
+                    selectedDetailItem = null
+                },
+                onApplyStorePrice = { storeName, storeAddress, price ->
+                    viewModel.updateItemPrice(item, price, storeName, storeAddress)
+                    selectedDetailItem = null
+                },
+                onAddRecipeIngredients = { missingList ->
+                    val ingredients = missingList.map { name ->
+                        RecipeIngredient(
+                            name = name,
+                            quantity = 1.0,
+                            unit = "pcs",
+                            estimatedPrice = 50.0,
+                            category = "Pantry",
+                            isSelected = true
+                        )
+                    }
+                    viewModel.addRecipeIngredientsToList(ingredients, item.storeName)
+                    selectedDetailItem = null
+                }
+            )
+        }
+
+        // Auto-Add Recipe Dialog
+        if (showAutoAddRecipeDialog) {
+            AutoAddRecipeDialog(
+                currencySymbol = totals.currency.symbol,
+                onDismiss = { showAutoAddRecipeDialog = false },
+                onAddIngredients = { ingredients ->
+                    viewModel.addRecipeIngredientsToList(ingredients)
+                }
+            )
+        }
+
+        // Search & Price Estimation Dialog
+        if (showPriceSearchDialog) {
+            PriceSearchDialog(
+                currencySymbol = totals.currency.symbol,
+                viewModel = viewModel,
+                onDismiss = { showPriceSearchDialog = false },
+                onAddProductWithPrice = { name, price, store, unit ->
+                    viewModel.addItem(
+                        name = name,
+                        category = "Pantry",
+                        quantity = 1.0,
+                        unit = unit,
+                        price = price,
+                        storeName = store,
+                        storeAddress = "",
+                        latitude = null,
+                        longitude = null,
+                        notes = "Added from price estimator"
+                    )
                 }
             )
         }

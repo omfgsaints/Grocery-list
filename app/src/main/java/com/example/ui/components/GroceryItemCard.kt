@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
@@ -57,17 +58,17 @@ fun GroceryItemCard(
     onToggleCheck: () -> Unit,
     onIncrementQty: () -> Unit,
     onDecrementQty: () -> Unit,
+    onItemClick: () -> Unit,
     onUpdatePrice: () -> Unit,
     onEditItem: () -> Unit,
     onDeleteItem: () -> Unit,
-    onStoreClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
     val containerColor by animateColorAsState(
         targetValue = if (item.isChecked) {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
         } else {
             MaterialTheme.colorScheme.surface
         },
@@ -77,252 +78,161 @@ fun GroceryItemCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable { onItemClick() }
             .testTag("item_card_${item.id}"),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = if (item.isChecked) 0.dp else 1.5.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            // Column 1: Checkbox on the side (for items already in cart)
+            Checkbox(
+                checked = item.isChecked,
+                onCheckedChange = { onToggleCheck() },
+                colors = CheckboxDefaults.colors(
+                    checkedColor = MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier
+                    .size(40.dp)
+                    .testTag("item_checkbox_${item.id}")
+            )
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            // Column 2: ITEM (Name, Store tag, Category emoji)
+            Column(
+                modifier = Modifier
+                    .weight(1.4f)
+                    .padding(end = 6.dp)
             ) {
-                // Checkbox
-                Checkbox(
-                    checked = item.isChecked,
-                    onCheckedChange = { onToggleCheck() },
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.testTag("item_checkbox_${item.id}")
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textDecoration = if (item.isChecked) TextDecoration.LineThrough else TextDecoration.None,
+                    color = if (item.isChecked) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
 
-                // Item Name and Category
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 4.dp)
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = item.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        textDecoration = if (item.isChecked) TextDecoration.LineThrough else TextDecoration.None,
-                        color = if (item.isChecked) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        text = getEmoji(item.category),
+                        style = MaterialTheme.typography.labelSmall
                     )
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = getEmoji(item.category) + " " + item.category,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-
-                        if (item.notes.isNotBlank()) {
-                            Text(
-                                text = "• ${item.notes}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-
-                // Line Total Price
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    modifier = Modifier.padding(start = 4.dp)
-                ) {
-                    Text(
-                        text = "$currencySymbol${String.format(Locale.US, "%.2f", item.totalPrice)}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (item.isChecked) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
-                    )
-                    if (item.price > 0 && item.quantity != 1.0) {
-                        Text(
-                            text = "$currencySymbol${String.format(Locale.US, "%.2f", item.price)} / ${item.unit}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
-
-                // Context menu
-                Box {
-                    IconButton(
-                        onClick = { menuExpanded = true },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .testTag("item_menu_button_${item.id}")
-                    ) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = "Item actions",
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Update Price") },
-                            leadingIcon = { Icon(Icons.Default.PriceChange, contentDescription = null) },
-                            onClick = {
-                                onUpdatePrice()
-                                menuExpanded = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Edit Item") },
-                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-                            onClick = {
-                                onEditItem()
-                                menuExpanded = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Delete") },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                onDeleteItem()
-                                menuExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Bottom bar: Store Tag & Fast Quantity Steppers
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Store Tag Pill
-                if (item.storeName.isNotBlank()) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-                        modifier = Modifier
-                            .clickable { onStoreClick(item.storeName) }
-                            .testTag("item_store_chip_${item.id}")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    if (item.storeName.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
                         ) {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = item.storeName,
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
-                } else {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.clickable { onEditItem() }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Tag store",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // Quick Quantity Stepper
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(20.dp)
-                        )
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(26.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface)
-                            .clickable { onDecrementQty() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Remove,
-                            contentDescription = "Decrease Quantity",
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Text(
-                        text = "${formatQty(item.quantity)} ${item.unit}",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(26.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface)
-                            .clickable { onIncrementQty() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Increase Quantity",
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
                 }
             }
+
+            // Column 3: PRICE (Unit price & bold line total)
+            Column(
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier
+                    .weight(0.9f)
+                    .padding(end = 8.dp)
+            ) {
+                Text(
+                    text = "$currencySymbol${String.format(Locale.US, "%.2f", item.totalPrice)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (item.isChecked) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.primary
+                )
+                if (item.price > 0) {
+                    Text(
+                        text = "$currencySymbol${String.format(Locale.US, "%.2f", item.price)}/${item.unit}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+
+            // Column 4: # OF PIECES / QUANTITY (Fast compact steppers)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable { onDecrementQty() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Remove,
+                        contentDescription = "Decrease",
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Text(
+                    text = "${formatQty(item.quantity)} ${item.unit}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 6.dp),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable { onIncrementQty() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Increase",
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            // Click for more details indicator
+            Icon(
+                Icons.Default.ChevronRight,
+                contentDescription = "More details",
+                modifier = Modifier
+                    .size(20.dp)
+                    .padding(start = 2.dp),
+                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+            )
         }
     }
 }
@@ -332,10 +242,10 @@ private fun getEmoji(category: String): String {
         "produce" -> "🥬"
         "dairy" -> "🧀"
         "bakery" -> "🍞"
-        "meat" -> "🥩"
+        "meat & seafood", "meat" -> "🥩"
         "pantry" -> "🥫"
         "frozen" -> "🍦"
-        "beverages" -> "🧃"
+        "beverages", "drinks" -> "🧃"
         "snacks" -> "🥨"
         "household" -> "🧼"
         else -> "🛒"
