@@ -1,0 +1,6 @@
+{
+  "name": "SmartCart",
+  "description": "Smart grocery list with location-based store price tracking, quantity calculations, and price history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
